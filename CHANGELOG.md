@@ -1,4 +1,4 @@
-# [Unreleased]
+# [3.2.3-beta.4] - 2026-02-22
 
 ## Backend
 
