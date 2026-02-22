@@ -46,7 +46,7 @@ class WecomProvider(NotificationProvider):
         }
 
         resp = await self.post_data(self.notification_url, data)
-        logger.debug(f"Wecom notification: {resp.status_code}")
+        logger.debug("Wecom notification: %s", resp.status_code)
         return resp.status_code == 200
 
     async def test(self) -> tuple[bool, str]:

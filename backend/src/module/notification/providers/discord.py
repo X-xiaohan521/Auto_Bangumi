@@ -39,7 +39,7 @@ class DiscordProvider(NotificationProvider):
         }
 
         resp = await self.post_data(self.webhook_url, data)
-        logger.debug(f"Discord notification: {resp.status_code}")
+        logger.debug("Discord notification: %s", resp.status_code)
         return resp.status_code in (200, 204)
 
     async def test(self) -> tuple[bool, str]:

@@ -1,3 +1,18 @@
+# [Unreleased]
+
+## Backend
+
+### Performance
+
+- 优化日志系统性能，适配长时间运行的 Docker 环境
+  - `RotatingFileHandler` 替代 `FileHandler`（5 MB 轮转，最多 3 个备份 = 20 MB 上限）
+  - `QueueHandler` + `QueueListener` 实现异步日志写入，不阻塞事件循环
+  - `GET /api/log` 仅读取最后 512 KB，防止大日志文件导致 OOM
+  - 所有 `logger.debug(f"...")` 转为惰性 `%s` 格式化（~80 处），避免禁用 debug 时的无效字符串拼接
+  - 移除高频缓存命中的 debug 日志噪音（Mikan、TMDB 解析器）
+
+---
+
 # [3.2.3-beta.3] - 2026-01-30
 
 ## Backend

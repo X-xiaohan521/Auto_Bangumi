@@ -35,7 +35,7 @@ class NotificationManager:
                 try:
                     provider = provider_cls(cfg)
                     self.providers.append(provider)
-                    logger.debug(f"Loaded notification provider: {cfg.type}")
+                    logger.debug("Loaded notification provider: %s", cfg.type)
                 except Exception as e:
                     logger.warning(f"Failed to load provider {cfg.type}: {e}")
             else:
@@ -73,8 +73,9 @@ class NotificationManager:
                 async with provider:
                     await provider.send(notification)
                 logger.debug(
-                    f"Sent notification via {provider.__class__.__name__}: "
-                    f"{notification.official_title}"
+                    "Sent notification via %s: %s",
+                    provider.__class__.__name__,
+                    notification.official_title,
                 )
             except Exception as e:
                 logger.warning(

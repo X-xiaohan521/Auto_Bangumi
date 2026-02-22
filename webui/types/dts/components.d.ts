@@ -61,7 +61,6 @@ declare module '@vue/runtime-core' {
     WizardContainer: typeof import('./../../src/components/setup/wizard-container.vue')['default']
     WizardStepAccount: typeof import('./../../src/components/setup/wizard-step-account.vue')['default']
     WizardStepDownloader: typeof import('./../../src/components/setup/wizard-step-downloader.vue')['default']
-    WizardStepMedia: typeof import('./../../src/components/setup/wizard-step-media.vue')['default']
     WizardStepNotification: typeof import('./../../src/components/setup/wizard-step-notification.vue')['default']
     WizardStepReview: typeof import('./../../src/components/setup/wizard-step-review.vue')['default']
     WizardStepRss: typeof import('./../../src/components/setup/wizard-step-rss.vue')['default']

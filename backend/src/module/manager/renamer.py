@@ -49,7 +49,7 @@ class Renamer(DownloadClient):
             logger.info(
                 f"Finished checking {torrent_count} files' name, renamed {rename_count} files."
             )
-        logger.debug(f"Checked {torrent_count} files")
+        logger.debug("Checked %s files", torrent_count)
 
     @staticmethod
     def gen_path(
@@ -67,12 +67,13 @@ class Renamer(DownloadClient):
         # Apply episode offset
         original_episode = int(file_info.episode)
         adjusted_episode = original_episode + episode_offset
-        # Episode 0 is valid (specials, OVAs, etc.) - only handle truly negative results
-        if adjusted_episode < 0:
-            # Offset would make episode negative - ignore the offset
+        # Episode 0 is valid for specials/OVAs when the source episode is already 0.
+        # But an offset producing exactly 0 (e.g., EP12 + offset -12) is almost always
+        # an off-by-one user error, so revert to original in that case.
+        if adjusted_episode < 0 or (adjusted_episode == 0 and original_episode > 0):
             adjusted_episode = original_episode
             logger.warning(
-                f"[Renamer] Episode offset {episode_offset} would make episode {original_episode} negative, ignoring offset"
+                f"[Renamer] Episode offset {episode_offset} would make episode {original_episode} non-positive, ignoring offset"
             )
         episode = f"0{adjusted_episode}" if adjusted_episode < 10 else adjusted_episode
         if method == "none" or method == "subtitle_none":
@@ -128,7 +129,7 @@ class Renamer(DownloadClient):
                         and (time.time() - last_attempt) < _PENDING_RENAME_COOLDOWN
                     ):
                         logger.debug(
-                            f"[Renamer] Skipping rename (pending cooldown): {media_path}"
+                            "[Renamer] Skipping rename (pending cooldown): %s", media_path
                         )
                         return None
 
@@ -141,8 +142,7 @@ class Renamer(DownloadClient):
                         # Only apply episode offset
                         original_ep = int(ep.episode)
                         adjusted_episode = original_ep + episode_offset
-                        # Episode 0 is valid - only handle truly negative results
-                        if adjusted_episode < 0:
+                        if adjusted_episode < 0 or (adjusted_episode == 0 and original_ep > 0):
                             adjusted_episode = original_ep
                         return Notification(
                             official_title=bangumi_name,
@@ -348,7 +348,7 @@ class Renamer(DownloadClient):
                     result[torrent_hash] = (0, 0)
 
         except Exception as e:
-            logger.debug(f"[Renamer] Batch offset lookup failed: {e}")
+            logger.debug("[Renamer] Batch offset lookup failed: %s", e)
             # Fall back to individual lookups on error
             for info in torrents_info:
                 if info["hash"] not in result:
@@ -384,7 +384,7 @@ class Renamer(DownloadClient):
                     bangumi = db.bangumi.search_id(torrent_record.bangumi_id)
                     if bangumi and not bangumi.deleted:
                         logger.debug(
-                            f"[Renamer] Found offsets via qb_hash: ep={bangumi.episode_offset}, season={bangumi.season_offset}"
+                            "[Renamer] Found offsets via qb_hash: ep=%s, season=%s", bangumi.episode_offset, bangumi.season_offset
                         )
                         return bangumi.episode_offset, bangumi.season_offset
 
@@ -394,7 +394,7 @@ class Renamer(DownloadClient):
                     bangumi = db.bangumi.search_id(bangumi_id)
                     if bangumi and not bangumi.deleted:
                         logger.debug(
-                            f"[Renamer] Found offsets via tag ab:{bangumi_id}: ep={bangumi.episode_offset}, season={bangumi.season_offset}"
+                            "[Renamer] Found offsets via tag ab:%s: ep=%s, season=%s", bangumi_id, bangumi.episode_offset, bangumi.season_offset
                         )
                         return bangumi.episode_offset, bangumi.season_offset
 
@@ -425,7 +425,7 @@ class Renamer(DownloadClient):
                     f"name={torrent_name[:60] if torrent_name else 'N/A'}..."
                 )
         except Exception as e:
-            logger.debug(f"[Renamer] Could not lookup offsets for {save_path}: {e}")
+            logger.debug("[Renamer] Could not lookup offsets for %s: %s", save_path, e)
         return 0, 0
 
     async def rename(self) -> list[Notification]:

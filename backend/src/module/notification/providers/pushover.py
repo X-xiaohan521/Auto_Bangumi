@@ -40,7 +40,7 @@ class PushoverProvider(NotificationProvider):
             data["url_title"] = "查看海报"
 
         resp = await self.post_data(self.API_URL, data)
-        logger.debug(f"Pushover notification: {resp.status_code}")
+        logger.debug("Pushover notification: %s", resp.status_code)
         return resp.status_code == 200
 
     async def test(self) -> tuple[bool, str]:

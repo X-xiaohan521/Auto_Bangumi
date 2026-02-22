@@ -16,10 +16,10 @@ class RSSDatabase:
         result = self.session.execute(statement)
         db_data = result.scalar_one_or_none()
         if db_data:
-            logger.debug(f"RSS Item {data.url} already exists.")
+            logger.debug("RSS Item %s already exists.", data.url)
             return False
         else:
-            logger.debug(f"RSS Item {data.url} not exists, adding...")
+            logger.debug("RSS Item %s not exists, adding...", data.url)
             self.session.add(data)
             self.session.commit()
             self.session.refresh(data)
@@ -36,7 +36,7 @@ class RSSDatabase:
         if new_items:
             self.session.add_all(new_items)
             self.session.commit()
-            logger.debug(f"Batch inserted {len(new_items)} RSS items.")
+            logger.debug("Batch inserted %s RSS items.", len(new_items))
 
     def update(self, _id: int, data: RSSUpdate) -> bool:
         statement = select(RSSItem).where(RSSItem.id == _id)

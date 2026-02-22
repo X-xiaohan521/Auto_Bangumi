@@ -93,7 +93,7 @@ class WebAuthnService:
         # 存储 challenge 用于后续验证
         challenge_key = f"reg_{username}"
         self._challenges[challenge_key] = options.challenge
-        logger.debug(f"Generated registration challenge for {username}")
+        logger.debug("Generated registration challenge for %s", username)
 
         return json.loads(options_to_json(options))
 
@@ -187,7 +187,7 @@ class WebAuthnService:
         # 存储 challenge
         challenge_key = f"auth_{username}"
         self._challenges[challenge_key] = options.challenge
-        logger.debug(f"Generated authentication challenge for {username}")
+        logger.debug("Generated authentication challenge for %s", username)
 
         return json.loads(options_to_json(options))
 

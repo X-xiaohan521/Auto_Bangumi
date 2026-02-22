@@ -74,7 +74,7 @@ class WebhookProvider(NotificationProvider):
         data = self._render_template(notification)
 
         resp = await self.post_data(self.url, data)
-        logger.debug(f"Webhook notification: {resp.status_code}")
+        logger.debug("Webhook notification: %s", resp.status_code)
         # Accept any 2xx status code as success
         return 200 <= resp.status_code < 300
 

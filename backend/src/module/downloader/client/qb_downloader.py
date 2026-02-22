@@ -64,7 +64,7 @@ class QbDownloader:
                 httpx.RequestError,
                 httpx.TimeoutException,
             ) as e:
-                logger.debug(f"[Downloader] Logout request failed (non-critical): {e}")
+                logger.debug("[Downloader] Logout request failed (non-critical): %s", e)
             await self._client.aclose()
             self._client = None
 
@@ -202,7 +202,7 @@ class QbDownloader:
                 data={"hash": torrent_hash, "oldPath": old_path, "newPath": new_path},
             )
             if resp.status_code == 409:
-                logger.debug(f"Conflict409Error: {old_path} >> {new_path}")
+                logger.debug("Conflict409Error: %s >> %s", old_path, new_path)
                 return False
             if resp.status_code != 200:
                 return False
@@ -226,7 +226,7 @@ class QbDownloader:
                             continue
                         # Final attempt failed
                         logger.debug(
-                            f"[Downloader] Rename API returned 200 but file unchanged: {old_path}"
+                            "[Downloader] Rename API returned 200 but file unchanged: %s", old_path
                         )
                         return False
                 # new_path found or old_path not found

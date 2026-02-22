@@ -14,17 +14,17 @@ class TorrentDatabase:
     def add(self, data: Torrent):
         self.session.add(data)
         self.session.commit()
-        logger.debug(f"Insert {data.name} in database.")
+        logger.debug("Insert %s in database.", data.name)
 
     def add_all(self, datas: list[Torrent]):
         self.session.add_all(datas)
         self.session.commit()
-        logger.debug(f"Insert {len(datas)} torrents in database.")
+        logger.debug("Insert %s torrents in database.", len(datas))
 
     def update(self, data: Torrent):
         self.session.add(data)
         self.session.commit()
-        logger.debug(f"Update {data.name} in database.")
+        logger.debug("Update %s in database.", data.name)
 
     def update_all(self, datas: list[Torrent]):
         self.session.add_all(datas)
@@ -33,7 +33,7 @@ class TorrentDatabase:
     def update_one_user(self, data: Torrent):
         self.session.add(data)
         self.session.commit()
-        logger.debug(f"Update {data.name} in database.")
+        logger.debug("Update %s in database.", data.name)
 
     def search(self, _id: int) -> Torrent | None:
         result = self.session.execute(select(Torrent).where(Torrent.id == _id))
@@ -82,6 +82,6 @@ class TorrentDatabase:
             torrent.qb_hash = qb_hash
             self.session.add(torrent)
             self.session.commit()
-            logger.debug(f"Updated qb_hash for torrent {torrent_id}: {qb_hash}")
+            logger.debug("Updated qb_hash for torrent %s: %s", torrent_id, qb_hash)
             return True
         return False

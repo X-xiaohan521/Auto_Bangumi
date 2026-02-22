@@ -75,7 +75,7 @@ class DownloadClient(TorrentPath):
             await self.client.add_category("BangumiCollection")
         except Exception as e:
             logger.debug(
-                f"[Downloader] Could not add category (may already exist): {e}"
+                "[Downloader] Could not add category (may already exist): %s", e
             )
         if settings.downloader.path == "":
             prefs = await self.client.get_app_prefs()
@@ -129,7 +129,7 @@ class DownloadClient(TorrentPath):
         if result:
             logger.info(f"{old_path} >> {new_path}")
         else:
-            logger.debug(f"[Downloader] Rename failed: {old_path} >> {new_path}")
+            logger.debug("[Downloader] Rename failed: %s >> %s", old_path, new_path)
         return result
 
     async def delete_torrent(self, hashes, delete_files: bool = True):
@@ -149,7 +149,7 @@ class DownloadClient(TorrentPath):
             if isinstance(torrent, list):
                 if len(torrent) == 0:
                     logger.debug(
-                        f"[Downloader] No torrent found: {bangumi.official_title}"
+                        "[Downloader] No torrent found: %s", bangumi.official_title
                     )
                     return False
                 if "magnet" in torrent[0].url:
@@ -189,11 +189,11 @@ class DownloadClient(TorrentPath):
                 category="Bangumi",
                 tags=tags,
             ):
-                logger.debug(f"[Downloader] Add torrent: {bangumi.official_title}")
+                logger.debug("[Downloader] Add torrent: %s", bangumi.official_title)
                 return True
             else:
                 logger.debug(
-                    f"[Downloader] Torrent added before: {bangumi.official_title}"
+                    "[Downloader] Torrent added before: %s", bangumi.official_title
                 )
                 return False
         except Exception as e:
@@ -237,4 +237,4 @@ class DownloadClient(TorrentPath):
     async def add_tag(self, torrent_hash: str, tag: str):
         """Add a tag to a torrent."""
         await self.client.add_tag(torrent_hash, tag)
-        logger.debug(f"[Downloader] Added tag '{tag}' to torrent {torrent_hash[:8]}...")
+        logger.debug("[Downloader] Added tag '%s' to torrent %s...", tag, torrent_hash[:8])

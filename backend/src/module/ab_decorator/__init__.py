@@ -16,7 +16,7 @@ def qb_connect_failed_wait(func):
             try:
                 return await func(*args, **kwargs)
             except Exception as e:
-                logger.debug(f"URL: {args[0]}")
+                logger.debug("URL: %s", args[0])
                 logger.warning(e)
                 logger.warning("Cannot connect to qBittorrent. Wait 5 min and retry...")
                 await asyncio.sleep(300)
@@ -31,7 +31,7 @@ def api_failed(func):
         try:
             return await func(*args, **kwargs)
         except Exception as e:
-            logger.debug(f"URL: {args[0]}")
+            logger.debug("URL: %s", args[0])
             logger.warning("Wrong API response.")
             logger.debug(e)
 

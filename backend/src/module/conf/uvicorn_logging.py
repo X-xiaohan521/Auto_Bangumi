@@ -11,10 +11,12 @@ logging_config = {
     },
     "handlers": {
         "file": {
-            "class": "logging.FileHandler",
+            "class": "logging.handlers.RotatingFileHandler",
             "filename": LOG_PATH,
             "formatter": "default",
             "encoding": "utf-8",
+            "maxBytes": 5242880,
+            "backupCount": 3,
         },
         "console": {
             "class": "logging.StreamHandler",

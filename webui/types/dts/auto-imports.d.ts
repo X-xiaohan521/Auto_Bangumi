@@ -12,6 +12,7 @@ declare global {
   const apiDownload: typeof import('../../src/api/download')['apiDownload']
   const apiDownloader: typeof import('../../src/api/downloader')['apiDownloader']
   const apiLog: typeof import('../../src/api/log')['apiLog']
+  const apiNotification: typeof import('../../src/api/notification')['apiNotification']
   const apiPasskey: typeof import('../../src/api/passkey')['apiPasskey']
   const apiProgram: typeof import('../../src/api/program')['apiProgram']
   const apiRSS: typeof import('../../src/api/rss')['apiRSS']

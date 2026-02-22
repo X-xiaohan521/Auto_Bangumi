@@ -120,8 +120,9 @@ def detect_virtual_seasons(episodes: list[dict], gap_months: int = 6) -> list[in
         if days_diff > gap_days:
             virtual_season_starts.append(curr_ep["episode_number"])
             logger.debug(
-                f"[TMDB] Detected virtual season break: {days_diff} days gap "
-                f"between ep{prev_ep['episode_number']} and ep{curr_ep['episode_number']}"
+                "[TMDB] Detected virtual season break: %s days gap "
+                "between ep%s and ep%s",
+                days_diff, prev_ep['episode_number'], curr_ep['episode_number']
             )
 
     return virtual_season_starts
@@ -161,7 +162,7 @@ async def get_aired_episode_count(tv_id: int, season_number: int, language: str,
                 # Invalid date format, skip this episode
                 continue
 
-    logger.debug(f"[TMDB] Season {season_number}: {aired_count} aired of {len(episodes)} total episodes")
+    logger.debug("[TMDB] Season %s: %s aired of %s total episodes", season_number, aired_count, len(episodes))
     return aired_count
 
 
@@ -183,7 +184,6 @@ def get_season(seasons: list) -> tuple[int, str]:
 async def tmdb_parser(title, language, test: bool = False) -> TMDBInfo | None:
     cache_key = f"{title}:{language}"
     if cache_key in _tmdb_cache:
-        logger.debug(f"[TMDB] Cache hit for {title}")
         return _tmdb_cache[cache_key]
 
     async with RequestContent() as req:
@@ -232,7 +232,7 @@ async def tmdb_parser(title, language, test: bool = False) -> TMDBInfo | None:
                         vs_starts = detect_virtual_seasons(episodes)
                         if len(vs_starts) > 1:
                             virtual_season_starts[season_num] = vs_starts
-                            logger.debug(f"[TMDB] Season {season_num} has virtual seasons starting at episodes: {vs_starts}")
+                            logger.debug("[TMDB] Season %s has virtual seasons starting at episodes: %s", season_num, vs_starts)
                         # Count only aired episodes
                         season_episode_counts[season_num] = len(episodes)
                     else:

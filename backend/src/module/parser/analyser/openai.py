@@ -108,7 +108,7 @@ class OpenAIParser:
             except json.JSONDecodeError:
                 logger.warning(f"Cannot parse result {result} as python dict.")
 
-        logger.debug(f"the parsed result is: {result}")
+        logger.debug("the parsed result is: %s", result)
 
         return result
 

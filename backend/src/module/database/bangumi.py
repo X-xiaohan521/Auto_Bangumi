@@ -116,8 +116,11 @@ class BangumiDatabase:
             )
             if is_semantic_match:
                 logger.debug(
-                    f"[Database] Found semantic duplicate: '{data.title_raw}' matches "
-                    f"existing '{candidate.title_raw}' (official: {data.official_title})"
+                    "[Database] Found semantic duplicate: '%s' matches "
+                    "existing '%s' (official: %s)",
+                    data.title_raw,
+                    candidate.title_raw,
+                    data.official_title,
                 )
                 return candidate
 
@@ -177,7 +180,9 @@ class BangumiDatabase:
     def add(self, data: Bangumi) -> bool:
         if self._is_duplicate(data):
             logger.debug(
-                f"[Database] Skipping duplicate: {data.official_title} ({data.group_name})"
+                "[Database] Skipping duplicate: %s (%s)",
+                data.official_title,
+                data.group_name,
             )
             return False
 
@@ -195,7 +200,7 @@ class BangumiDatabase:
         self.session.add(data)
         self.session.commit()
         _invalidate_bangumi_cache()
-        logger.debug(f"[Database] Insert {data.official_title} into database.")
+        logger.debug("[Database] Insert %s into database.", data.official_title)
         return True
 
     def add_all(self, datas: list[Bangumi]) -> int:
@@ -250,12 +255,14 @@ class BangumiDatabase:
         if not unique_to_add:
             if semantic_merged > 0:
                 logger.debug(
-                    f"[Database] {semantic_merged} bangumi merged as aliases, "
-                    f"rest were duplicates."
+                    "[Database] %s bangumi merged as aliases, "
+                    "rest were duplicates.",
+                    semantic_merged,
                 )
             else:
                 logger.debug(
-                    f"[Database] All {len(datas)} bangumi already exist, skipping."
+                    "[Database] All %s bangumi already exist, skipping.",
+                    len(datas),
                 )
             return 0
 
@@ -265,12 +272,16 @@ class BangumiDatabase:
         skipped = len(datas) - len(unique_to_add) - semantic_merged
         if skipped > 0 or semantic_merged > 0:
             logger.debug(
-                f"[Database] Insert {len(unique_to_add)} bangumi, "
-                f"skipped {skipped} duplicates, merged {semantic_merged} as aliases."
+                "[Database] Insert %s bangumi, "
+                "skipped %s duplicates, merged %s as aliases.",
+                len(unique_to_add),
+                skipped,
+                semantic_merged,
             )
         else:
             logger.debug(
-                f"[Database] Insert {len(unique_to_add)} bangumi into database."
+                "[Database] Insert %s bangumi into database.",
+                len(unique_to_add),
             )
         return len(unique_to_add)
 
@@ -289,14 +300,14 @@ class BangumiDatabase:
         self.session.add(db_data)
         self.session.commit()
         _invalidate_bangumi_cache()
-        logger.debug(f"[Database] Update {data.official_title}")
+        logger.debug("[Database] Update %s", data.official_title)
         return True
 
     def update_all(self, datas: list[Bangumi]):
         self.session.add_all(datas)
         self.session.commit()
         _invalidate_bangumi_cache()
-        logger.debug(f"[Database] Update {len(datas)} bangumi.")
+        logger.debug("[Database] Update %s bangumi.", len(datas))
 
     def update_rss(self, title_raw: str, rss_set: str):
         statement = select(Bangumi).where(Bangumi.title_raw == title_raw)
@@ -308,7 +319,7 @@ class BangumiDatabase:
             self.session.add(bangumi)
             self.session.commit()
             _invalidate_bangumi_cache()
-            logger.debug(f"[Database] Update {title_raw} rss_link to {rss_set}.")
+            logger.debug("[Database] Update %s rss_link to %s.", title_raw, rss_set)
 
     def update_poster(self, title_raw: str, poster_link: str):
         statement = select(Bangumi).where(Bangumi.title_raw == title_raw)
@@ -319,7 +330,7 @@ class BangumiDatabase:
             self.session.add(bangumi)
             self.session.commit()
             _invalidate_bangumi_cache()
-            logger.debug(f"[Database] Update {title_raw} poster_link to {poster_link}.")
+            logger.debug("[Database] Update %s poster_link to %s.", title_raw, poster_link)
 
     def delete_one(self, _id: int):
         statement = select(Bangumi).where(Bangumi.id == _id)
@@ -329,7 +340,7 @@ class BangumiDatabase:
             self.session.delete(bangumi)
             self.session.commit()
             _invalidate_bangumi_cache()
-            logger.debug(f"[Database] Delete bangumi id: {_id}.")
+            logger.debug("[Database] Delete bangumi id: %s.", _id)
 
     def delete_all(self):
         statement = delete(Bangumi)
@@ -362,7 +373,7 @@ class BangumiDatabase:
         if bangumi is None:
             logger.warning(f"[Database] Cannot find bangumi id: {_id}.")
             return None
-        logger.debug(f"[Database] Find bangumi id: {_id}.")
+        logger.debug("[Database] Find bangumi id: %s.", _id)
         return bangumi
 
     def search_ids(self, ids: list[int]) -> list[Bangumi]:
@@ -426,7 +437,8 @@ class BangumiDatabase:
             self.session.commit()
             _invalidate_bangumi_cache()
             logger.debug(
-                f"[Database] Batch updated rss_link for {len(rss_updated)} bangumi."
+                "[Database] Batch updated rss_link for %s bangumi.",
+                len(rss_updated),
             )
         return unmatched
 
@@ -485,7 +497,7 @@ class BangumiDatabase:
             self.session.add(bangumi)
             self.session.commit()
             _invalidate_bangumi_cache()
-            logger.debug(f"[Database] Disable rule {bangumi.title_raw}.")
+            logger.debug("[Database] Disable rule %s.", bangumi.title_raw)
 
     def search_rss(self, rss_link: str) -> list[Bangumi]:
         statement = select(Bangumi).where(func.instr(rss_link, Bangumi.rss_link) > 0)
@@ -502,7 +514,7 @@ class BangumiDatabase:
         self.session.add(bangumi)
         self.session.commit()
         _invalidate_bangumi_cache()
-        logger.debug(f"[Database] Archived bangumi id: {_id}.")
+        logger.debug("[Database] Archived bangumi id: %s.", _id)
         return True
 
     def unarchive_one(self, _id: int) -> bool:
@@ -515,7 +527,7 @@ class BangumiDatabase:
         self.session.add(bangumi)
         self.session.commit()
         _invalidate_bangumi_cache()
-        logger.debug(f"[Database] Unarchived bangumi id: {_id}.")
+        logger.debug("[Database] Unarchived bangumi id: %s.", _id)
         return True
 
     def match_by_save_path(self, save_path: str) -> Optional[Bangumi]:
@@ -615,8 +627,12 @@ class BangumiDatabase:
         self.session.commit()
         _invalidate_bangumi_cache()
         logger.debug(
-            f"[Database] Marked bangumi id {_id} as needs_review: {reason} "
-            f"(suggested: season={suggested_season_offset}, episode={suggested_episode_offset})"
+            "[Database] Marked bangumi id %s as needs_review: %s "
+            "(suggested: season=%s, episode=%s)",
+            _id,
+            reason,
+            suggested_season_offset,
+            suggested_episode_offset,
         )
         return True
 
@@ -632,5 +648,5 @@ class BangumiDatabase:
         self.session.add(bangumi)
         self.session.commit()
         _invalidate_bangumi_cache()
-        logger.debug(f"[Database] Cleared needs_review for bangumi id {_id}")
+        logger.debug("[Database] Cleared needs_review for bangumi id %s", _id)
         return True

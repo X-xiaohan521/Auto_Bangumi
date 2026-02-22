@@ -8,11 +8,26 @@ from module.security.api import UNAUTHORIZED, get_current_user
 router = APIRouter(prefix="/log", tags=["log"])
 
 
+_TAIL_BYTES = 512 * 1024  # 512 KB
+
+
 @router.get("", response_model=str, dependencies=[Depends(get_current_user)])
 async def get_log():
     if LOG_PATH.exists():
         with open(LOG_PATH, "rb") as f:
-            return Response(f.read(), media_type="text/plain")
+            f.seek(0, 2)
+            size = f.tell()
+            if size > _TAIL_BYTES:
+                f.seek(-_TAIL_BYTES, 2)
+                data = f.read()
+                # Drop first partial line
+                idx = data.find(b"\n")
+                if idx != -1:
+                    data = data[idx + 1 :]
+            else:
+                f.seek(0)
+                data = f.read()
+            return Response(data, media_type="text/plain")
     else:
         return Response("Log file not found", status_code=404)
 
