@@ -1,15 +1,15 @@
 import json
 import logging
 from concurrent.futures import ThreadPoolExecutor
-from typing import Any
-from pydantic import BaseModel
-from typing import Optional
+from typing import Any, Optional
 
-from openai import OpenAI, AzureOpenAI
+from openai import AzureOpenAI, OpenAI
+from pydantic import BaseModel
 
 from module.models import Bangumi
 
 logger = logging.getLogger(__name__)
+
 
 class Episode(BaseModel):
     title_en: Optional[str]
@@ -103,12 +103,17 @@ class OpenAIParser:
             result = resp.choices[0].message.parsed
 
         if asdict:
-            try:
-                result = json.loads(result[result.index("{"):result.rindex("}") + 1])    # find the first { and last } for better compatibility
-            except json.JSONDecodeError:
-                logger.warning(f"Cannot parse result {result} as python dict.")
+            if hasattr(result, "model_dump"):
+                result = result.model_dump()
+            else:
+                try:
+                    result = json.loads(
+                        result[result.index("{") : result.rindex("}") + 1]
+                    )  # find the first { and last } for better compatibility
+                except (json.JSONDecodeError, ValueError):
+                    logger.warning(f"Cannot parse result {result} as python dict.")
 
-        logger.debug(f"the parsed result is: {result}")
+        logger.debug("the parsed result is: %s", result)
 
         return result
 
@@ -131,7 +136,6 @@ class OpenAIParser:
                 dict(role="user", content=text),
             ],
             response_format=Episode,
-
             # set temperature to 0 to make results be more stable and reproducible.
             temperature=0,
         )

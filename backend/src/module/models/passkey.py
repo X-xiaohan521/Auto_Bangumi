@@ -1,7 +1,8 @@
 """
 WebAuthn Passkey 数据模型
 """
-from datetime import datetime
+
+from datetime import datetime, timezone
 from typing import Optional
 
 from pydantic import BaseModel
@@ -29,7 +30,7 @@ class Passkey(SQLModel, table=True):
     transports: Optional[str] = None  # JSON array: ["usb", "nfc", "ble", "internal"]
 
     # 审计字段
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     last_used_at: Optional[datetime] = None
 
     # 备份状态 (是否为多设备凭证，如 iCloud Keychain)

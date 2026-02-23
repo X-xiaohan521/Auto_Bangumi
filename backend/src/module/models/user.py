@@ -9,7 +9,7 @@ class User(SQLModel, table=True):
     username: str = Field(
         "admin", min_length=4, max_length=20, regex=r"^[a-zA-Z0-9_]+$"
     )
-    password: str = Field("adminadmin", min_length=8)
+    password: str = Field("", min_length=8)
 
 
 class UserUpdate(SQLModel):

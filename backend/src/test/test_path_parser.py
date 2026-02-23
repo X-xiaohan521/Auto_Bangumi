@@ -89,3 +89,57 @@ class TestGenSavePath:
             result = TorrentPath._gen_save_path(bangumi)
 
         assert "Season 1" in result  # Would be -4, so uses original season
+
+    def test_gen_save_path_season_two_no_offset(self):
+        """Non-S1 base season with no offset resolves directly."""
+        from module.downloader.path import TorrentPath
+        from module.models import Bangumi
+
+        bangumi = Bangumi(
+            official_title="Test Anime",
+            year="2024",
+            season=2,
+            season_offset=0,
+            title_raw="test",
+        )
+        with patch("module.downloader.path.settings") as mock_settings:
+            mock_settings.downloader.path = "/downloads/Bangumi"
+            result = TorrentPath._gen_save_path(bangumi)
+
+        assert "Season 2" in result
+
+    def test_gen_save_path_large_positive_offset(self):
+        """Large positive offset adds correctly."""
+        from module.downloader.path import TorrentPath
+        from module.models import Bangumi
+
+        bangumi = Bangumi(
+            official_title="Test Anime",
+            year="2024",
+            season=1,
+            season_offset=5,
+            title_raw="test",
+        )
+        with patch("module.downloader.path.settings") as mock_settings:
+            mock_settings.downloader.path = "/downloads/Bangumi"
+            result = TorrentPath._gen_save_path(bangumi)
+
+        assert "Season 6" in result  # 1 + 5
+
+    def test_gen_save_path_offset_yields_exactly_season_one(self):
+        """Offset that resolves to exactly Season 1 is kept."""
+        from module.downloader.path import TorrentPath
+        from module.models import Bangumi
+
+        bangumi = Bangumi(
+            official_title="Test Anime",
+            year="2024",
+            season=2,
+            season_offset=-1,
+            title_raw="test",
+        )
+        with patch("module.downloader.path.settings") as mock_settings:
+            mock_settings.downloader.path = "/downloads/Bangumi"
+            result = TorrentPath._gen_save_path(bangumi)
+
+        assert "Season 1" in result  # 2 - 1 = 1

@@ -1,3 +1,57 @@
+# [3.2.3] - 2026-02-23
+
+## Backend
+
+### Added
+
+- 新增 MCP (Model Context Protocol) 服务器，支持通过 Claude Desktop 等 LLM 工具管理番剧订阅
+  - SSE 传输层挂载在 `/mcp/sse`，支持 MCP 客户端连接
+  - 10 个工具：list_anime、get_anime、search_anime、subscribe_anime、unsubscribe_anime、list_downloads、list_rss_feeds、get_program_status、refresh_feeds、update_anime
+  - 4 个资源：anime/list、anime/{id}、status、rss/feeds
+  - 本地网络 IP 白名单安全中间件（RFC 1918 + 回环地址），无需 JWT 认证
+- 新增通知系统重构，支持多通知渠道同时启用
+  - 支持 Telegram、Bark、Server 酱、企业微信、Discord、Gotify、Pushover、Webhook 八种渠道
+  - 新增通知管理 API：`GET/PUT /api/notification/providers`
+- 新增 E2E 集成测试套件，覆盖 RSS→下载→重命名全流程
+
+### Fixes
+
+- 修复第 0 集（SP/OVA）被错误重命名为第 1 集的问题 (#977)
+  - Episode 0 现在免受集数偏移影响，不再覆盖正常集数文件
+- 修复 RSS 过滤器包含特殊字符（如 `[字幕组`）时导致程序崩溃的问题 (#974)
+  - 无效正则表达式自动降级为字面量匹配
+- 修复聚合 RSS 解析时 `title_raw` 为空导致 `TypeError` 崩溃的问题 (#976)
+- 修复解析器处理无括号种子名称时 `IndexError` 崩溃的问题 (#973)
+- 修复删除番剧时未清理关联种子记录的问题
+- 修复认证路由、JWT 刷新和 WebAuthn 注册流程的多个安全问题
+- 修复程序生命周期管理和后台任务取消逻辑
+- 修复数据库迁移在部分场景下未正确执行的问题
+
+### Performance
+
+- 优化日志系统：`RotatingFileHandler` 轮转（5 MB × 3）、`QueueHandler` 异步写入、`GET /api/log` 限读 512 KB
+- 优化重命名器：批量数据库查询，并发获取种子文件列表
+- 所有 `logger.debug(f"...")` 转为惰性 `%s` 格式化（~80 处）
+
+### Tests
+
+- 新增 26 个回归测试覆盖 #974、#976、#977、#986
+- 扩展 raw_parser、torrent_parser、path_parser 测试覆盖率
+
+## Frontend
+
+### Fixes
+
+- 修复认证路由守卫和 i18n 初始化顺序问题
+- 修复通知设置组件与项目设计系统的对齐问题
+- 修复组件生命周期管理问题
+
+## Docs
+
+- README 移除未实现的 Aria2 和 Transmission 下载器 (#987)
+
+---
+
 # [3.2.0-beta.13] - 2026-01-26
 
 ## Frontend

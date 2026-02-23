@@ -1,19 +1,18 @@
 """Tests for authentication: JWT tokens, password hashing, login flow."""
 
-import pytest
 from datetime import timedelta
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
+import pytest
 from jose import JWTError
 
 from module.security.jwt import (
     create_access_token,
     decode_token,
-    verify_token,
-    verify_password,
     get_password_hash,
+    verify_password,
+    verify_token,
 )
-
 
 # ---------------------------------------------------------------------------
 # JWT Token Creation
@@ -155,8 +154,9 @@ class TestGetCurrentUser:
     @patch("module.security.api.DEV_AUTH_BYPASS", False)
     async def test_no_cookie_raises_401(self):
         """get_current_user raises 401 when no token cookie."""
-        from module.security.api import get_current_user
         from fastapi import HTTPException
+
+        from module.security.api import get_current_user
 
         with pytest.raises(HTTPException) as exc_info:
             await get_current_user(token=None)
@@ -165,8 +165,9 @@ class TestGetCurrentUser:
     @patch("module.security.api.DEV_AUTH_BYPASS", False)
     async def test_invalid_token_raises_401(self):
         """get_current_user raises 401 for invalid token."""
-        from module.security.api import get_current_user
         from fastapi import HTTPException
+
+        from module.security.api import get_current_user
 
         with pytest.raises(HTTPException) as exc_info:
             await get_current_user(token="invalid.jwt.token")
@@ -175,8 +176,9 @@ class TestGetCurrentUser:
     @patch("module.security.api.DEV_AUTH_BYPASS", False)
     async def test_valid_token_user_not_active(self):
         """get_current_user raises 401 when user not in active_user list."""
-        from module.security.api import get_current_user, active_user
         from fastapi import HTTPException
+
+        from module.security.api import active_user, get_current_user
 
         token = create_access_token(
             data={"sub": "ghost_user"}, expires_delta=timedelta(hours=1)
@@ -190,13 +192,15 @@ class TestGetCurrentUser:
     @patch("module.security.api.DEV_AUTH_BYPASS", False)
     async def test_valid_token_active_user_succeeds(self):
         """get_current_user returns username for valid token + active user."""
-        from module.security.api import get_current_user, active_user
+        from datetime import datetime
+
+        from module.security.api import active_user, get_current_user
 
         token = create_access_token(
             data={"sub": "active_user"}, expires_delta=timedelta(hours=1)
         )
         active_user.clear()
-        active_user.append("active_user")
+        active_user["active_user"] = datetime.now()
 
         result = await get_current_user(token=token)
         assert result == "active_user"

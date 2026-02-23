@@ -1,3 +1,4 @@
+import sys
 from pathlib import Path
 
 from .config import VERSION, settings
@@ -10,4 +11,4 @@ LEGACY_DATA_PATH = Path("data/data.json")
 VERSION_PATH = Path("config/version.info")
 POSTERS_PATH = Path("data/posters")
 
-PLATFORM = "Windows" if "\\" in settings.downloader.path else "Unix"
+PLATFORM = "Windows" if sys.platform == "win32" else "Unix"

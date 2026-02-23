@@ -46,6 +46,8 @@ class TorrentManager(Database):
         if isinstance(data, Bangumi):
             async with DownloadClient() as client:
                 self.rss.delete(data.official_title)
+                # Clean up torrent records so re-adding the same anime can re-download
+                self.torrent.delete_by_bangumi_id(int(_id))
                 self.bangumi.delete_one(int(_id))
                 torrent_message = None
                 if file:

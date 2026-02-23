@@ -30,7 +30,10 @@ CHINESE_NUMBER_MAP = {
 
 
 def get_group(name: str) -> str:
-    return re.split(r"[\[\]]", name)[1]
+    parts = re.split(r"[\[\]]", name)
+    if len(parts) > 1:
+        return parts[1]
+    return ""
 
 
 def pre_process(raw_name: str) -> str:
@@ -38,7 +41,7 @@ def pre_process(raw_name: str) -> str:
 
 
 def prefix_process(raw: str, group: str) -> str:
-    raw = re.sub(f".{group}.", "", raw)
+    raw = re.sub(f".{re.escape(group)}.", "", raw)
     raw_process = PREFIX_RE.sub("/", raw)
     arg_group = raw_process.split("/")
     while "" in arg_group:
@@ -47,9 +50,9 @@ def prefix_process(raw: str, group: str) -> str:
         arg_group = arg_group[0].split(" ")
     for arg in arg_group:
         if re.search(r"新番|月?番", arg) and len(arg) <= 5:
-            raw = re.sub(f".{arg}.", "", raw)
+            raw = re.sub(f".{re.escape(arg)}.", "", raw)
         elif re.search(r"港澳台地区", arg):
-            raw = re.sub(f".{arg}.", "", raw)
+            raw = re.sub(f".{re.escape(arg)}.", "", raw)
     return raw
 
 
@@ -76,7 +79,7 @@ def season_process(season_info: str):
                 season = int(season_pro)
             except ValueError:
                 season = CHINESE_NUMBER_MAP[season_pro]
-                break
+            break
     return name, season_raw, season
 
 
@@ -137,6 +140,8 @@ def process(raw_title: str):
     group = get_group(content_title)
     # 翻译组的名字
     match_obj = TITLE_RE.match(content_title)
+    if match_obj is None:
+        return None
     # 处理标题
     season_info, episode_info, other = list(
         map(lambda x: x.strip(), match_obj.groups())

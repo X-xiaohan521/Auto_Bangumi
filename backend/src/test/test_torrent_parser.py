@@ -91,6 +91,42 @@ def test_torrent_parser():
     assert sf.season == 3
     assert sf.language == "zh-tw"
 
+    # EP number format — RULES[4] EP? branch (untested without dash separator)
+    file_name = "[Ohys-Raws] Kamen Rider Gaim EP33 (TV-Asahi 1280x720 x264 AAC).mp4"
+    bf = torrent_parser(file_name)
+    assert bf.title == "Kamen Rider Gaim"
+    assert bf.group == "Ohys-Raws"
+    assert bf.episode == 33
+    assert bf.season == 1
+
+    # "tc" language code → zh-tw (SUBTITLE_LANG["zh-tw"] includes "tc")
+    file_name = "葬送的芙莉莲 S01E05.tc.ass"
+    sf = torrent_parser(file_name, file_type="subtitle")
+    assert sf.title == "葬送的芙莉莲"
+    assert sf.season == 1
+    assert sf.episode == 5
+    assert sf.language == "zh-tw"
+
+    # Subtitle with no language code → SubtitleFile.language requires str; raises ValidationError
+    file_name = "Dungeon Meshi S01E01.srt"
+    with pytest.raises(Exception):
+        torrent_parser(file_name, file_type="subtitle")
+
+    # Full absolute multi-level path — get_path_basename strips all directories
+    file_name = "/downloads/Bangumi/葬送的芙莉莲 (2023)/Season 1/葬送的芙莉莲 S01E05.mp4"
+    bf = torrent_parser(file_name)
+    assert bf.title == "葬送的芙莉莲"
+    assert bf.season == 1
+    assert bf.episode == 5
+
+    # Version suffix [NNvN] — RULES[1] (?:v\d{1,2})? branch (v2 supported but untested)
+    file_name = "[Sakurato] Kaguya-sama wa Kokurasetai [12v2][AVC-8bit 1080p AAC][CHS].mp4"
+    bf = torrent_parser(file_name)
+    assert bf.title == "Kaguya-sama wa Kokurasetai"
+    assert bf.group == "Sakurato"
+    assert bf.episode == 12
+    assert bf.season == 1
+
 
 class TestGetPathBasename:
     def test_regular_path(self):

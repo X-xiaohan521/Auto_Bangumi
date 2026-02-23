@@ -34,5 +34,5 @@ class TelegramNotification(RequestContent):
             resp = await self.post_files(self.photo_url, data, files={"photo": photo})
         else:
             resp = await self.post_data(self.message_url, data)
-        logger.debug(f"Telegram notification: {resp.status_code}")
+        logger.debug("Telegram notification: %s", resp.status_code)
         return resp.status_code == 200

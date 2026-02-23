@@ -107,5 +107,55 @@ def test_raw_parser():
     assert info.episode == 1
     assert info.season == 1
 
+    # Chinese season number via CHINESE_NUMBER_MAP ("二" → 2)
+    content = "[LoliHouse] 关于我转生变成史莱姆这档事 第二季 / Tensei shitara Slime Datta Ken 2nd Season - 01 [WebRip 1080p HEVC-10bit AAC][简繁内封字幕]"
+    info = raw_parser(content)
+    assert info.group == "LoliHouse"
+    assert info.title_zh == "关于我转生变成史莱姆这档事"
+    assert info.title_en == "Tensei shitara Slime Datta Ken 2nd Season"
+    assert info.resolution == "1080p"
+    assert info.episode == 1
+    assert info.season == 2
+
+    # 4K resolution (2160p) — RESOLUTION_RE covers 2160 but untested
+    content = "[NC-Raws] 葬送的芙莉莲 / Sousou no Frieren - 03 [B-Global][WEB-DL][2160p][AVC AAC][Multi Sub][MKV]"
+    info = raw_parser(content)
+    assert info.group == "NC-Raws"
+    assert info.title_zh == "葬送的芙莉莲"
+    assert info.title_en == "Sousou no Frieren"
+    assert info.resolution == "2160p"
+    assert info.episode == 3
+    assert info.season == 1
+
+    # English "Season N" format (bracketed) — season_rule "Season \d{1,2}" branch
+    content = "[LoliHouse] 狼与香辛料 [Season 2] / Spice and Wolf - 01 [WebRip 1080p HEVC-10bit AAC][简繁内封字幕]"
+    info = raw_parser(content)
+    assert info.group == "LoliHouse"
+    assert info.title_zh == "狼与香辛料"
+    assert info.title_en == "Spice and Wolf"
+    assert info.resolution == "1080p"
+    assert info.episode == 1
+    assert info.season == 2
+
+    # Multi-group, Chinese punctuation in title, single-letter Latin prefix in EN title
+    content = "[北宇治字幕组&LoliHouse] 地。-关于地球的运动- / Chi. Chikyuu no Undou ni Tsuite - 03 [WebRip 1080p HEVC-10bit AAC ASSx2][简繁日内封字幕]"
+    info = raw_parser(content)
+    assert info.group == "北宇治字幕组&LoliHouse"
+    assert info.title_zh == "地。-关于地球的运动-"
+    assert info.title_en == "Chi. Chikyuu no Undou ni Tsuite"
+    assert info.resolution == "1080p"
+    assert info.episode == 3
+    assert info.season == 1
+
+    # English-only title — name_process returns title_zh=None when no CJK chars
+    content = "[动漫国字幕组&LoliHouse] THE MARGINAL SERVICE - 08 [WebRip 1080p HEVC-10bit AAC][简繁内封字幕]"
+    info = raw_parser(content)
+    assert info.group == "动漫国字幕组&LoliHouse"
+    assert info.title_en == "THE MARGINAL SERVICE"
+    assert info.title_zh is None
+    assert info.resolution == "1080p"
+    assert info.episode == 8
+    assert info.season == 1
+
 
 

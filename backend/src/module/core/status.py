@@ -1,7 +1,10 @@
 import asyncio
+import time
 
 from module.checker import Checker
 from module.conf import LEGACY_DATA_PATH
+
+DOWNLOADER_STATUS_TTL = 60
 
 
 class ProgramStatus(Checker):
@@ -10,27 +13,34 @@ class ProgramStatus(Checker):
         self.stop_event = asyncio.Event()
         self.lock = asyncio.Lock()
         self._downloader_status = False
+        self._downloader_last_check: float = 0
         self._torrents_status = False
+        self._tasks_started = False
         self.event = asyncio.Event()
 
     @property
     def is_running(self):
-        if self.stop_event.is_set() or self.check_first_run():
+        if not self._tasks_started or self.check_first_run():
             return False
         else:
             return True
 
     @property
     def is_stopped(self):
-        return self.stop_event.is_set()
+        return not self._tasks_started
 
     @property
     def downloader_status(self):
         return self._downloader_status
 
     async def check_downloader_status(self) -> bool:
-        if not self._downloader_status:
+        now = time.monotonic()
+        if (
+            not self._downloader_status
+            or (now - self._downloader_last_check) >= DOWNLOADER_STATUS_TTL
+        ):
             self._downloader_status = await self.check_downloader()
+            self._downloader_last_check = now
         return self._downloader_status
 
     @property

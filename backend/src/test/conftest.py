@@ -8,6 +8,7 @@ from fastapi.testclient import TestClient
 from sqlmodel import Session, SQLModel, create_engine
 
 from module.api import v1
+from module.database.bangumi import _invalidate_bangumi_cache
 from module.models.config import Config
 from module.models import ResponseModel
 from module.security.api import get_current_user
@@ -16,6 +17,19 @@ from module.security.api import get_current_user
 # ---------------------------------------------------------------------------
 # Database Fixtures
 # ---------------------------------------------------------------------------
+
+
+@pytest.fixture(autouse=True)
+def _clear_bangumi_cache():
+    """Invalidate the module-level bangumi cache before each test.
+
+    The BangumiDatabase.search_all() uses a module-level TTL cache that
+    persists across tests using different in-memory databases, causing
+    stale results.
+    """
+    _invalidate_bangumi_cache()
+    yield
+    _invalidate_bangumi_cache()
 
 
 @pytest.fixture

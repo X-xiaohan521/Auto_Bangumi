@@ -16,6 +16,7 @@ class RSSEngine(Database):
     def __init__(self, _engine=engine):
         super().__init__(_engine)
         self._to_refresh = False
+        self._filter_cache: dict[str, re.Pattern] = {}
 
     @staticmethod
     async def _get_torrents(rss: RSSItem) -> list[Torrent]:
@@ -109,13 +110,25 @@ class RSSEngine(Database):
             logger.warning(f"[Engine] Failed to fetch RSS {rss_item.name}: {e}")
             return [], str(e)
 
-    _filter_cache: dict[str, re.Pattern] = {}
-
     def _get_filter_pattern(self, filter_str: str) -> re.Pattern:
         if filter_str not in self._filter_cache:
-            self._filter_cache[filter_str] = re.compile(
-                filter_str.replace(",", "|"), re.IGNORECASE
-            )
+            raw_pattern = filter_str.replace(",", "|")
+            try:
+                self._filter_cache[filter_str] = re.compile(
+                    raw_pattern, re.IGNORECASE
+                )
+            except re.error:
+                # Filter contains invalid regex chars (e.g. unmatched '[')
+                # Fall back to escaping each term for literal matching
+                terms = filter_str.split(",")
+                escaped = "|".join(re.escape(t) for t in terms)
+                self._filter_cache[filter_str] = re.compile(
+                    escaped, re.IGNORECASE
+                )
+                logger.warning(
+                    f"[Engine] Filter '{filter_str}' contains invalid regex, "
+                    f"using literal matching"
+                )
         return self._filter_cache[filter_str]
 
     def match_torrent(self, torrent: Torrent) -> Optional[Bangumi]:
@@ -137,7 +150,7 @@ class RSSEngine(Database):
             rss_item = self.rss.search_id(rss_id)
             rss_items = [rss_item] if rss_item else []
         # From RSS Items, fetch all torrents concurrently
-        logger.debug(f"[Engine] Get {len(rss_items)} RSS items")
+        logger.debug("[Engine] Get %s RSS items", len(rss_items))
         results = await asyncio.gather(
             *[self._pull_rss_with_status(rss_item) for rss_item in rss_items]
         )
@@ -153,7 +166,7 @@ class RSSEngine(Database):
                 matched_data = self.match_torrent(torrent)
                 if matched_data:
                     if await client.add_torrent(torrent, matched_data):
-                        logger.debug(f"[Engine] Add torrent {torrent.name} to client")
+                        logger.debug("[Engine] Add torrent %s to client", torrent.name)
                     torrent.downloaded = True
             # Add all torrents to database
             self.torrent.add_all(new_torrents)

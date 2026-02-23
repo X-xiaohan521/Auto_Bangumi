@@ -80,8 +80,6 @@
 ***已支持的下载器：***
 
 - qBittorrent
-- Aria2
-- Transmission
 
 ## Star History
 

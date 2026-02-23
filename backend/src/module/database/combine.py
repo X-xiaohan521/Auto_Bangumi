@@ -199,17 +199,21 @@ class Database(Session):
                 if "title_aliases" in columns:
                     needs_run = False
             if needs_run:
-                with self.engine.connect() as conn:
-                    for stmt in statements:
-                        conn.execute(text(stmt))
-                    conn.commit()
-                logger.info(f"[Database] Migration v{version}: {description}")
+                try:
+                    with self.engine.connect() as conn:
+                        for stmt in statements:
+                            conn.execute(text(stmt))
+                        conn.commit()
+                    logger.info(f"[Database] Migration v{version}: {description}")
+                except Exception as e:
+                    logger.error(f"[Database] Migration v{version} failed: {e}")
+                    break
             else:
                 logger.debug(
                     f"[Database] Migration v{version} skipped (already applied): {description}"
                 )
-        self._set_schema_version(CURRENT_SCHEMA_VERSION)
-        logger.info(f"[Database] Schema version is now {CURRENT_SCHEMA_VERSION}.")
+            self._set_schema_version(version)
+        logger.info(f"[Database] Schema version is now {self._get_schema_version()}.")
         self._fill_null_with_defaults()
 
     def _get_field_default(self, field_info: FieldInfo) -> tuple[bool, Any]:
@@ -290,8 +294,8 @@ class Database(Session):
 
                     result = conn.execute(
                         text(
-                            f"UPDATE {table_name} SET {field_name} = :val "
-                            f"WHERE {field_name} IS NULL"
+                            f'UPDATE "{table_name}" SET "{field_name}" = :val '
+                            f'WHERE "{field_name}" IS NULL'
                         ),
                         {"val": sql_value},
                     )
@@ -309,6 +313,9 @@ class Database(Session):
         # Run migration online
         bangumi_data = self.bangumi.search_all()
         user_data = self.exec("SELECT * FROM user").all()
+        if not user_data:
+            logger.warning("[Database] No user data found, skipping migration.")
+            return
         readd_bangumi = []
         for bangumi in bangumi_data:
             dict_data = bangumi.dict()
@@ -317,7 +324,10 @@ class Database(Session):
         self.drop_table()
         self.create_table()
         self.commit()
-        bangumi_data = self.bangumi.search_all()
-        self.bangumi.add_all(readd_bangumi)
-        self.add(User(**user_data[0]))
-        self.commit()
+        try:
+            self.bangumi.add_all(readd_bangumi)
+            self.add(User(**user_data[0]))
+            self.commit()
+        except Exception:
+            self.rollback()
+            raise

@@ -1,6 +1,6 @@
-from datetime import timedelta
+from datetime import datetime, timedelta
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Cookie, Depends, HTTPException, status
 from fastapi.responses import JSONResponse, Response
 from fastapi.security import OAuth2PasswordRequestForm
 
@@ -12,7 +12,7 @@ from module.security.api import (
     get_current_user,
     update_user_info,
 )
-from module.security.jwt import create_access_token
+from module.security.jwt import create_access_token, decode_token
 
 from .response import u_response
 
@@ -35,19 +35,29 @@ async def login(response: Response, form_data=Depends(OAuth2PasswordRequestForm)
 @router.get(
     "/refresh_token", response_model=dict, dependencies=[Depends(get_current_user)]
 )
-async def refresh(response: Response):
-    token = create_access_token(
-        data={"sub": active_user[0]}, expires_delta=timedelta(days=1)
+async def refresh(response: Response, token: str = Cookie(None)):
+    payload = decode_token(token)
+    username = payload.get("sub") if payload else None
+    if not username:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized"
+        )
+    active_user[username] = datetime.now()
+    new_token = create_access_token(
+        data={"sub": username}, expires_delta=timedelta(days=1)
     )
-    response.set_cookie(key="token", value=token, httponly=True, max_age=86400)
-    return {"access_token": token, "token_type": "bearer"}
+    response.set_cookie(key="token", value=new_token, httponly=True, max_age=86400)
+    return {"access_token": new_token, "token_type": "bearer"}
 
 
 @router.get(
     "/logout", response_model=APIResponse, dependencies=[Depends(get_current_user)]
 )
-async def logout(response: Response):
-    active_user.clear()
+async def logout(response: Response, token: str = Cookie(None)):
+    payload = decode_token(token)
+    username = payload.get("sub") if payload else None
+    if username:
+        active_user.pop(username, None)
     response.delete_cookie(key="token")
     return JSONResponse(
         status_code=200,
@@ -56,8 +66,15 @@ async def logout(response: Response):
 
 
 @router.post("/update", response_model=dict, dependencies=[Depends(get_current_user)])
-async def update_user(user_data: UserUpdate, response: Response):
-    old_user = active_user[0]
+async def update_user(
+    user_data: UserUpdate, response: Response, token: str = Cookie(None)
+):
+    payload = decode_token(token)
+    old_user = payload.get("sub") if payload else None
+    if not old_user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized"
+        )
     if update_user_info(user_data, old_user):
         token = create_access_token(
             data={"sub": old_user}, expires_delta=timedelta(days=1)

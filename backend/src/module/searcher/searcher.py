@@ -41,7 +41,7 @@ class SearchTorrent(RequestContent, RSSAnalyser):
                 _poster_cache[title] = tmdb_info.poster_link
                 return tmdb_info.poster_link
         except Exception as e:
-            logger.debug(f"[Searcher] Failed to fetch TMDB poster for {title}: {e}")
+            logger.debug("[Searcher] Failed to fetch TMDB poster for %s: %s", title, e)
 
         _poster_cache[title] = None
         return None

@@ -78,7 +78,7 @@ class RequestURL:
         while True:
             try:
                 req = await self._client.get(url=url, headers=headers)
-                logger.debug(f"[Network] Successfully connected to {url}. Status: {req.status_code}")
+                logger.debug("[Network] Successfully connected to %s. Status: %s", url, req.status_code)
                 req.raise_for_status()
                 return req
             except httpx.HTTPStatusError as e:
@@ -130,7 +130,7 @@ class RequestURL:
             req.raise_for_status()
             return True
         except (httpx.RequestError, httpx.HTTPStatusError):
-            logger.debug(f"[Network] Cannot connect to {url}.")
+            logger.debug("[Network] Cannot connect to %s.", url)
             return False
 
     async def post_form(self, url: str, data: dict, files):

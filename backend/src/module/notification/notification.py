@@ -45,7 +45,7 @@ class PostNotification:
         await asyncio.to_thread(self._get_poster_sync, notify)
         try:
             await self.notifier.post_msg(notify)
-            logger.debug(f"Send notification: {notify.official_title}")
+            logger.debug("Send notification: %s", notify.official_title)
         except Exception as e:
             logger.warning(f"Failed to send notification: {e}")
             return False

@@ -64,7 +64,7 @@ class QbDownloader:
                 httpx.RequestError,
                 httpx.TimeoutException,
             ) as e:
-                logger.debug(f"[Downloader] Logout request failed (non-critical): {e}")
+                logger.debug("[Downloader] Logout request failed (non-critical): %s", e)
             await self._client.aclose()
             self._client = None
 
@@ -193,16 +193,45 @@ class QbDownloader:
             data={"hashes": hashes},
         )
 
-    async def torrents_rename_file(self, torrent_hash, old_path, new_path) -> bool:
+    async def torrents_rename_file(
+        self, torrent_hash, old_path, new_path, verify: bool = True
+    ) -> bool:
         try:
             resp = await self._client.post(
                 self._url("torrents/renameFile"),
                 data={"hash": torrent_hash, "oldPath": old_path, "newPath": new_path},
             )
             if resp.status_code == 409:
-                logger.debug(f"Conflict409Error: {old_path} >> {new_path}")
+                logger.debug("Conflict409Error: %s >> %s", old_path, new_path)
                 return False
-            return resp.status_code == 200
+            if resp.status_code != 200:
+                return False
+
+            if not verify:
+                return True
+
+            # Verify the rename actually happened by checking file list
+            # qBittorrent can return 200 but delay the actual rename (e.g., while seeding)
+            # Use exponential backoff: 0.1s, 0.2s, 0.4s (max 3 attempts)
+            for attempt in range(3):
+                delay = 0.1 * (2**attempt)
+                await asyncio.sleep(delay)
+                files = await self.torrents_files(torrent_hash)
+                for f in files:
+                    if f.get("name") == new_path:
+                        return True
+                    if f.get("name") == old_path:
+                        # File still has old name - try again
+                        if attempt < 2:
+                            continue
+                        # Final attempt failed
+                        logger.debug(
+                            "[Downloader] Rename API returned 200 but file unchanged: %s", old_path
+                        )
+                        return False
+                # new_path found or old_path not found
+                return True
+            return True
         except (httpx.ConnectError, httpx.RequestError, httpx.TimeoutException) as e:
             logger.warning(f"[Downloader] Failed to rename file {old_path}: {e}")
             return False

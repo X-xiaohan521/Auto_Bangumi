@@ -1,8 +1,9 @@
 """
 Passkey 数据库操作层
 """
+
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List, Optional
 
 from fastapi import HTTPException
@@ -54,7 +55,7 @@ class PasskeyDatabase:
     async def update_passkey_usage(self, passkey: Passkey, new_sign_count: int):
         """更新 Passkey 使用记录（签名计数器 + 最后使用时间）"""
         passkey.sign_count = new_sign_count
-        passkey.last_used_at = datetime.utcnow()
+        passkey.last_used_at = datetime.now(timezone.utc)
         self.session.add(passkey)
         await self.session.commit()
 

@@ -65,7 +65,7 @@ class RequestContent(RequestURL):
 
     async def get_html(self, _url):
         resp = await self.get_url(_url)
-        return resp.text
+        return resp.text if resp else None
 
     async def get_content(self, _url):
         req = await self.get_url(_url)

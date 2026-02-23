@@ -440,6 +440,66 @@ def test_add_with_semantic_duplicate_creates_alias(db_session):
     assert "Frieren Beyond Journey's End" in aliases
 
 
+class TestDeleteByBangumiId:
+    """Tests for TorrentDatabase.delete_by_bangumi_id."""
+
+    def test_deletes_matching_torrents(self, db_session):
+        db = TorrentDatabase(db_session)
+        for i in range(3):
+            db.add(Torrent(name=f"torrent_{i}", url=f"https://example.com/{i}", bangumi_id=10))
+        assert len(db.search_all()) == 3
+
+        count = db.delete_by_bangumi_id(10)
+        assert count == 3
+        assert len(db.search_all()) == 0
+
+    def test_leaves_other_bangumi_torrents(self, db_session):
+        db = TorrentDatabase(db_session)
+        db.add(Torrent(name="keep", url="https://example.com/keep", bangumi_id=20))
+        db.add(Torrent(name="delete", url="https://example.com/delete", bangumi_id=30))
+
+        count = db.delete_by_bangumi_id(30)
+        assert count == 1
+        remaining = db.search_all()
+        assert len(remaining) == 1
+        assert remaining[0].name == "keep"
+
+    def test_no_match_returns_zero(self, db_session):
+        db = TorrentDatabase(db_session)
+        db.add(Torrent(name="unrelated", url="https://example.com/1", bangumi_id=5))
+
+        count = db.delete_by_bangumi_id(999)
+        assert count == 0
+        assert len(db.search_all()) == 1
+
+    def test_skips_null_bangumi_id(self, db_session):
+        db = TorrentDatabase(db_session)
+        db.add(Torrent(name="orphan", url="https://example.com/orphan", bangumi_id=None))
+        db.add(Torrent(name="target", url="https://example.com/target", bangumi_id=7))
+
+        count = db.delete_by_bangumi_id(7)
+        assert count == 1
+        remaining = db.search_all()
+        assert len(remaining) == 1
+        assert remaining[0].bangumi_id is None
+
+    def test_check_new_finds_urls_after_cleanup(self, db_session):
+        """Core scenario: after deleting torrent records, check_new should treat those URLs as new."""
+        db = TorrentDatabase(db_session)
+        db.add(Torrent(name="ep01", url="https://mikan.me/t/001", bangumi_id=42))
+        db.add(Torrent(name="ep02", url="https://mikan.me/t/002", bangumi_id=42))
+
+        # Before cleanup: check_new filters them out
+        incoming = [Torrent(name="ep01", url="https://mikan.me/t/001")]
+        assert db.check_new(incoming) == []
+
+        # After cleanup: same URLs are now "new"
+        db.delete_by_bangumi_id(42)
+        new = db.check_new(incoming)
+        assert len(new) == 1
+        assert new[0].url == "https://mikan.me/t/001"
+
+
 def test_groups_are_similar():
     """Test group name similarity detection."""
     from module.database.bangumi import _groups_are_similar

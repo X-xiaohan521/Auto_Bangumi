@@ -1,15 +1,16 @@
 """Tests for Auth API endpoints."""
 
-import pytest
-from unittest.mock import patch, MagicMock
+from datetime import datetime
+from unittest.mock import MagicMock, patch
 
+import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from module.api import v1
 from module.models import ResponseModel
-from module.security.api import get_current_user, active_user
-
+from module.security.api import active_user, get_current_user
+from module.security.jwt import create_access_token
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -115,7 +116,9 @@ class TestLogin:
 class TestRefreshToken:
     def test_refresh_token_success(self, authed_client):
         """GET /auth/refresh_token returns new token."""
-        with patch("module.api.auth.active_user", ["testuser"]):
+        token = create_access_token(data={"sub": "testuser"})
+        authed_client.cookies.set("token", token)
+        with patch("module.api.auth.active_user", {"testuser": datetime.now()}):
             response = authed_client.get("/api/v1/auth/refresh_token")
 
         assert response.status_code == 200
@@ -132,7 +135,9 @@ class TestRefreshToken:
 class TestLogout:
     def test_logout_success(self, authed_client):
         """GET /auth/logout clears session and returns success."""
-        with patch("module.api.auth.active_user", ["testuser"]):
+        token = create_access_token(data={"sub": "testuser"})
+        authed_client.cookies.set("token", token)
+        with patch("module.api.auth.active_user", {"testuser": datetime.now()}):
             response = authed_client.get("/api/v1/auth/logout")
 
         assert response.status_code == 200
@@ -148,7 +153,9 @@ class TestLogout:
 class TestUpdateCredentials:
     def test_update_success(self, authed_client):
         """POST /auth/update with valid data updates credentials."""
-        with patch("module.api.auth.active_user", ["testuser"]):
+        token = create_access_token(data={"sub": "testuser"})
+        authed_client.cookies.set("token", token)
+        with patch("module.api.auth.active_user", {"testuser": datetime.now()}):
             with patch("module.api.auth.update_user_info", return_value=True):
                 response = authed_client.post(
                     "/api/v1/auth/update",
@@ -162,7 +169,9 @@ class TestUpdateCredentials:
 
     def test_update_failure(self, authed_client):
         """POST /auth/update with invalid old password fails."""
-        with patch("module.api.auth.active_user", ["testuser"]):
+        token = create_access_token(data={"sub": "testuser"})
+        authed_client.cookies.set("token", token)
+        with patch("module.api.auth.active_user", {"testuser": datetime.now()}):
             with patch("module.api.auth.update_user_info", return_value=False):
                 # When update_user_info returns False, the endpoint implicitly
                 # returns None which causes an error

@@ -15,7 +15,6 @@ _mikan_cache: dict[str, tuple[str, str]] = {}
 
 async def mikan_parser(homepage: str):
     if homepage in _mikan_cache:
-        logger.debug(f"[Mikan] Cache hit for {homepage}")
         return _mikan_cache[homepage]
     root_path = parse_url(homepage).host
     async with RequestContent() as req:

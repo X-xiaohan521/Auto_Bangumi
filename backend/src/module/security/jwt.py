@@ -1,16 +1,23 @@
+import secrets
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 
-
-def generate_key():
-    import secrets
-
-    return secrets.token_urlsafe(32)
+_SECRET_PATH = Path("config/.jwt_secret")
 
 
-app_pwd_key = generate_key()
+def _load_or_create_secret() -> str:
+    if _SECRET_PATH.exists():
+        return _SECRET_PATH.read_text().strip()
+    secret = secrets.token_hex(32)
+    _SECRET_PATH.parent.mkdir(parents=True, exist_ok=True)
+    _SECRET_PATH.write_text(secret)
+    return secret
+
+
+app_pwd_key = _load_or_create_secret()
 app_pwd_algorithm = "HS256"
 
 # Hashing 密码
