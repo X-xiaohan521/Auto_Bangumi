@@ -1,9 +1,9 @@
 """Tests for Passkey (WebAuthn) API endpoints."""
 
-import pytest
 from datetime import datetime
-from unittest.mock import patch, MagicMock, AsyncMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
+import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
@@ -11,9 +11,7 @@ from module.api import v1
 from module.models import ResponseModel
 from module.models.passkey import Passkey
 from module.security.api import get_current_user
-
 from test.factories import make_passkey
-
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -342,7 +340,7 @@ class TestAuthVerify:
             with patch(
                 "module.api.passkey.PasskeyAuthStrategy", return_value=mock_strategy
             ):
-                with patch("module.api.passkey.active_user", []):
+                with patch("module.api.passkey.active_user", {}):
                     response = unauthed_client.post(
                         "/api/v1/passkey/auth/verify",
                         json={

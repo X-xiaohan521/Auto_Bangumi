@@ -2,8 +2,9 @@
 Passkey 管理 API
 用于注册、列表、删除 Passkey 凭证
 """
+
 import logging
-from datetime import timedelta
+from datetime import datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import JSONResponse, Response
@@ -233,8 +234,7 @@ async def login_with_passkey(
             data={"sub": username}, expires_delta=timedelta(days=1)
         )
         response.set_cookie(key="token", value=token, httponly=True, max_age=86400)
-        if username not in active_user:
-            active_user.append(username)
+        active_user[username] = datetime.now()
         return {"access_token": token, "token_type": "bearer"}
 
     raise HTTPException(status_code=resp.status_code, detail=resp.msg_en)

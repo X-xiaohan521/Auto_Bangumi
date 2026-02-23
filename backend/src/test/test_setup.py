@@ -59,7 +59,9 @@ class TestSetupStatus:
             patch("module.api.setup.SENTINEL_PATH") as mock_sentinel,
             patch("module.api.setup.settings") as mock_settings,
             patch("module.api.setup.Config") as mock_config,
-            patch("module.api.setup.VERSION", "3.2.0"),  # Non-dev version to test config check
+            patch(
+                "module.api.setup.VERSION", "3.2.0"
+            ),  # Non-dev version to test config check
         ):
             mock_sentinel.exists.return_value = False
             mock_settings.dict.return_value = {"test": "changed"}
@@ -125,69 +127,72 @@ class TestTestDownloader:
     def test_connection_timeout(self, client, mock_first_run):
         import httpx
 
-        with patch("module.api.setup.httpx.AsyncClient") as mock_client_cls:
-            mock_instance = AsyncMock()
-            mock_instance.get.side_effect = httpx.TimeoutException("timeout")
-            mock_client_cls.return_value.__aenter__ = AsyncMock(
-                return_value=mock_instance
-            )
-            mock_client_cls.return_value.__aexit__ = AsyncMock(return_value=False)
+        with patch("module.api.setup._validate_url"):
+            with patch("module.api.setup.httpx.AsyncClient") as mock_client_cls:
+                mock_instance = AsyncMock()
+                mock_instance.get.side_effect = httpx.TimeoutException("timeout")
+                mock_client_cls.return_value.__aenter__ = AsyncMock(
+                    return_value=mock_instance
+                )
+                mock_client_cls.return_value.__aexit__ = AsyncMock(return_value=False)
 
-            response = client.post(
-                "/api/v1/setup/test-downloader",
-                json={
-                    "type": "qbittorrent",
-                    "host": "localhost:8080",
-                    "username": "admin",
-                    "password": "admin",
-                    "ssl": False,
-                },
-            )
-            assert response.status_code == 200
-            data = response.json()
-            assert data["success"] is False
+                response = client.post(
+                    "/api/v1/setup/test-downloader",
+                    json={
+                        "type": "qbittorrent",
+                        "host": "localhost:8080",
+                        "username": "admin",
+                        "password": "admin",
+                        "ssl": False,
+                    },
+                )
+                assert response.status_code == 200
+                data = response.json()
+                assert data["success"] is False
 
     def test_connection_refused(self, client, mock_first_run):
         import httpx
 
-        with patch("module.api.setup.httpx.AsyncClient") as mock_client_cls:
-            mock_instance = AsyncMock()
-            mock_instance.get.side_effect = httpx.ConnectError("refused")
-            mock_client_cls.return_value.__aenter__ = AsyncMock(
-                return_value=mock_instance
-            )
-            mock_client_cls.return_value.__aexit__ = AsyncMock(return_value=False)
+        with patch("module.api.setup._validate_url"):
+            with patch("module.api.setup.httpx.AsyncClient") as mock_client_cls:
+                mock_instance = AsyncMock()
+                mock_instance.get.side_effect = httpx.ConnectError("refused")
+                mock_client_cls.return_value.__aenter__ = AsyncMock(
+                    return_value=mock_instance
+                )
+                mock_client_cls.return_value.__aexit__ = AsyncMock(return_value=False)
 
-            response = client.post(
-                "/api/v1/setup/test-downloader",
-                json={
-                    "type": "qbittorrent",
-                    "host": "localhost:8080",
-                    "username": "admin",
-                    "password": "admin",
-                    "ssl": False,
-                },
-            )
-            assert response.status_code == 200
-            data = response.json()
-            assert data["success"] is False
+                response = client.post(
+                    "/api/v1/setup/test-downloader",
+                    json={
+                        "type": "qbittorrent",
+                        "host": "localhost:8080",
+                        "username": "admin",
+                        "password": "admin",
+                        "ssl": False,
+                    },
+                )
+                assert response.status_code == 200
+                data = response.json()
+                assert data["success"] is False
 
 
 class TestTestRSS:
     def test_invalid_url(self, client, mock_first_run):
-        with patch("module.api.setup.RequestContent") as mock_rc:
-            mock_instance = AsyncMock()
-            mock_instance.get_xml = AsyncMock(return_value=None)
-            mock_rc.return_value.__aenter__ = AsyncMock(return_value=mock_instance)
-            mock_rc.return_value.__aexit__ = AsyncMock(return_value=False)
+        with patch("module.api.setup._validate_url"):
+            with patch("module.api.setup.RequestContent") as mock_rc:
+                mock_instance = AsyncMock()
+                mock_instance.get_xml = AsyncMock(return_value=None)
+                mock_rc.return_value.__aenter__ = AsyncMock(return_value=mock_instance)
+                mock_rc.return_value.__aexit__ = AsyncMock(return_value=False)
 
-            response = client.post(
-                "/api/v1/setup/test-rss",
-                json={"url": "https://invalid.example.com/rss"},
-            )
-            assert response.status_code == 200
-            data = response.json()
-            assert data["success"] is False
+                response = client.post(
+                    "/api/v1/setup/test-rss",
+                    json={"url": "https://invalid.example.com/rss"},
+                )
+                assert response.status_code == 200
+                data = response.json()
+                assert data["success"] is False
 
 
 class TestRequestValidation:

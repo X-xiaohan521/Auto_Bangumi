@@ -2,9 +2,11 @@
 WebAuthn 认证服务层
 封装 py_webauthn 库的复杂性，提供清晰的注册和认证接口
 """
+
 import base64
 import json
 import logging
+import time
 from typing import List, Optional
 
 from webauthn import (
@@ -44,8 +46,44 @@ class WebAuthnService:
         self.rp_name = rp_name
         self.origin = origin
 
-        # 存储临时的 challenge（生产环境应使用 Redis）
-        self._challenges: dict[str, bytes] = {}
+        self._CHALLENGE_TTL = 300
+        self._CHALLENGE_MAX = 100
+        # Keyed by base64url-encoded challenge value -> (challenge_bytes, created_at, logical_key)
+        self._challenges: dict[str, tuple[bytes, float, str]] = {}
+
+    def _cleanup_expired(self) -> None:
+        now = time.time()
+        expired = [
+            k
+            for k, (_, ts, _) in self._challenges.items()
+            if now - ts > self._CHALLENGE_TTL
+        ]
+        for k in expired:
+            del self._challenges[k]
+
+    def _store_challenge(self, logical_key: str, challenge: bytes) -> None:
+        self._cleanup_expired()
+        if len(self._challenges) >= self._CHALLENGE_MAX:
+            oldest = min(self._challenges, key=lambda k: self._challenges[k][1])
+            del self._challenges[oldest]
+        b64key = self.base64url_encode(challenge)
+        self._challenges[b64key] = (challenge, time.time(), logical_key)
+
+    def _pop_challenge_by_key(self, logical_key: str) -> bytes | None:
+        self._cleanup_expired()
+        for b64key, (challenge, _, lk) in list(self._challenges.items()):
+            if lk == logical_key:
+                del self._challenges[b64key]
+                return challenge
+        return None
+
+    def _pop_challenge_by_value(self, challenge: bytes) -> bytes | None:
+        self._cleanup_expired()
+        b64key = self.base64url_encode(challenge)
+        entry = self._challenges.pop(b64key, None)
+        if entry:
+            return entry[0]
+        return None
 
     # ============ 注册流程 ============
 
@@ -90,9 +128,7 @@ class WebAuthnService:
             ],
         )
 
-        # 存储 challenge 用于后续验证
-        challenge_key = f"reg_{username}"
-        self._challenges[challenge_key] = options.challenge
+        self._store_challenge(f"reg_{username}", options.challenge)
         logger.debug("Generated registration challenge for %s", username)
 
         return json.loads(options_to_json(options))
@@ -114,8 +150,7 @@ class WebAuthnService:
         Raises:
             ValueError: 验证失败
         """
-        challenge_key = f"reg_{username}"
-        expected_challenge = self._challenges.get(challenge_key)
+        expected_challenge = self._pop_challenge_by_key(f"reg_{username}")
         if not expected_challenge:
             raise ValueError("Challenge not found or expired")
 
@@ -150,9 +185,6 @@ class WebAuthnService:
         except Exception as e:
             logger.error(f"Registration verification failed: {e}")
             raise ValueError(f"Invalid registration response: {str(e)}")
-        finally:
-            # 清理使用过的 challenge（无论成功或失败都清理，防止重放攻击）
-            self._challenges.pop(challenge_key, None)
 
     # ============ 认证流程 ============
 
@@ -184,9 +216,7 @@ class WebAuthnService:
             user_verification=UserVerificationRequirement.PREFERRED,
         )
 
-        # 存储 challenge
-        challenge_key = f"auth_{username}"
-        self._challenges[challenge_key] = options.challenge
+        self._store_challenge(f"auth_{username}", options.challenge)
         logger.debug("Generated authentication challenge for %s", username)
 
         return json.loads(options_to_json(options))
@@ -204,9 +234,10 @@ class WebAuthnService:
             user_verification=UserVerificationRequirement.PREFERRED,
         )
 
-        # Store challenge with a unique key for discoverable auth
-        challenge_key = f"auth_discoverable_{self.base64url_encode(options.challenge)[:16]}"
-        self._challenges[challenge_key] = options.challenge
+        self._store_challenge(
+            f"auth_discoverable_{self.base64url_encode(options.challenge)[:16]}",
+            options.challenge,
+        )
         logger.debug("Generated discoverable authentication challenge")
 
         return json.loads(options_to_json(options))
@@ -228,13 +259,11 @@ class WebAuthnService:
         Raises:
             ValueError: 验证失败
         """
-        challenge_key = f"auth_{username}"
-        expected_challenge = self._challenges.get(challenge_key)
+        expected_challenge = self._pop_challenge_by_key(f"auth_{username}")
         if not expected_challenge:
             raise ValueError("Challenge not found or expired")
 
         try:
-            # 解码 public key
             credential_public_key = base64.b64decode(passkey.public_key)
 
             verification = verify_authentication_response(
@@ -252,9 +281,6 @@ class WebAuthnService:
         except Exception as e:
             logger.error(f"Authentication verification failed: {e}")
             raise ValueError(f"Invalid authentication response: {str(e)}")
-        finally:
-            # 清理 challenge（无论成功或失败都清理，防止重放攻击）
-            self._challenges.pop(challenge_key, None)
 
     def verify_discoverable_authentication(
         self, credential: dict, passkey: Passkey
@@ -272,13 +298,12 @@ class WebAuthnService:
         Raises:
             ValueError: 验证失败
         """
-        # Find the challenge by checking all discoverable challenges
+        # Try all discoverable challenges to find the matching one
         expected_challenge = None
-        challenge_key = None
-        for key, challenge in list(self._challenges.items()):
-            if key.startswith("auth_discoverable_"):
+        for b64key, (challenge, _, lk) in list(self._challenges.items()):
+            if lk.startswith("auth_discoverable_"):
                 expected_challenge = challenge
-                challenge_key = key
+                del self._challenges[b64key]
                 break
 
         if not expected_challenge:
@@ -302,9 +327,6 @@ class WebAuthnService:
         except Exception as e:
             logger.error(f"Discoverable authentication verification failed: {e}")
             raise ValueError(f"Invalid authentication response: {str(e)}")
-        finally:
-            if challenge_key:
-                self._challenges.pop(challenge_key, None)
 
     # ============ 辅助方法 ============
 

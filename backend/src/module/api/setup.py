@@ -1,5 +1,8 @@
+import ipaddress
 import logging
+import socket
 from pathlib import Path
+from urllib.parse import urlparse
 
 import httpx
 from fastapi import APIRouter, HTTPException
@@ -7,9 +10,9 @@ from pydantic import BaseModel, Field
 
 from module.conf import VERSION, settings
 from module.models import Config, ResponseModel
+from module.models.config import NotificationProvider as ProviderConfig
 from module.network import RequestContent
 from module.notification import PROVIDER_REGISTRY
-from module.models.config import NotificationProvider as ProviderConfig
 from module.security.jwt import get_password_hash
 
 logger = logging.getLogger(__name__)
@@ -26,6 +29,27 @@ def _require_setup_needed():
     # Allow setup in dev mode even if settings differ
     if VERSION != "DEV_VERSION" and settings.dict() != Config().dict():
         raise HTTPException(status_code=403, detail="Setup already completed.")
+
+
+def _validate_url(url: str) -> None:
+    """Reject non-HTTP schemes and private/reserved/loopback IPs."""
+    parsed = urlparse(url)
+    if parsed.scheme not in ("http", "https"):
+        raise HTTPException(status_code=400, detail="Only http/https URLs are allowed.")
+    hostname = parsed.hostname
+    if not hostname:
+        raise HTTPException(status_code=400, detail="Invalid URL: no hostname.")
+    try:
+        addrs = socket.getaddrinfo(hostname, None)
+    except socket.gaierror:
+        raise HTTPException(status_code=400, detail="Cannot resolve hostname.")
+    for family, _, _, _, sockaddr in addrs:
+        ip = ipaddress.ip_address(sockaddr[0])
+        if ip.is_private or ip.is_reserved or ip.is_loopback:
+            raise HTTPException(
+                status_code=400,
+                detail="URLs pointing to private/reserved IPs are not allowed.",
+            )
 
 
 # --- Request/Response Models ---
@@ -108,12 +132,16 @@ async def test_downloader(req: TestDownloaderRequest):
 
     scheme = "https" if req.ssl else "http"
     host = req.host if "://" in req.host else f"{scheme}://{req.host}"
+    _validate_url(host)
 
     try:
         async with httpx.AsyncClient(timeout=5.0) as client:
             # Check if host is reachable and is qBittorrent
             resp = await client.get(host)
-            if "qbittorrent" not in resp.text.lower() and "vuetorrent" not in resp.text.lower():
+            if (
+                "qbittorrent" not in resp.text.lower()
+                and "vuetorrent" not in resp.text.lower()
+            ):
                 return TestResultResponse(
                     success=False,
                     message_en="Host is reachable but does not appear to be qBittorrent.",
@@ -169,6 +197,7 @@ async def test_downloader(req: TestDownloaderRequest):
 async def test_rss(req: TestRSSRequest):
     """Test an RSS feed URL."""
     _require_setup_needed()
+    _validate_url(req.url)
 
     try:
         async with RequestContent() as request:

@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from fastapi import Cookie, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 
@@ -8,10 +10,14 @@ from .jwt import verify_token
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
 
-active_user = []
+active_user: dict[str, datetime] = {}
 
-# Set to True to bypass authentication (for development/testing only)
-DEV_AUTH_BYPASS = False
+try:
+    from module.__version__ import VERSION
+except ImportError:
+    VERSION = "DEV_VERSION"
+
+DEV_AUTH_BYPASS = VERSION == "DEV_VERSION"
 
 
 async def get_current_user(token: str = Cookie(None)):
@@ -52,7 +58,7 @@ def auth_user(user: User):
     with Database() as db:
         resp = db.user.auth_user(user)
         if resp.status:
-            active_user.append(user.username)
+            active_user[user.username] = datetime.now()
         return resp
 
 

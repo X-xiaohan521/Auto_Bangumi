@@ -3,11 +3,12 @@
 import logging
 from typing import Optional
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 
-from module.notification import NotificationManager
 from module.models.config import NotificationProvider as ProviderConfig
+from module.notification import NotificationManager
+from module.security.api import get_current_user
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/notification", tags=["notification"])
@@ -44,7 +45,9 @@ class TestResponse(BaseModel):
     message_en: str = ""
 
 
-@router.post("/test", response_model=TestResponse)
+@router.post(
+    "/test", response_model=TestResponse, dependencies=[Depends(get_current_user)]
+)
 async def test_provider(request: TestProviderRequest):
     """Test a configured notification provider by its index.
 
@@ -78,7 +81,11 @@ async def test_provider(request: TestProviderRequest):
         )
 
 
-@router.post("/test-config", response_model=TestResponse)
+@router.post(
+    "/test-config",
+    response_model=TestResponse,
+    dependencies=[Depends(get_current_user)],
+)
 async def test_provider_config(request: TestProviderConfigRequest):
     """Test an unsaved notification provider configuration.
 
