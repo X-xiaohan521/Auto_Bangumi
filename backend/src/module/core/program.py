@@ -48,7 +48,6 @@ class Program(RenameThread, RSSThread, OffsetScanThread, CalendarRefreshThread):
         # Prevent duplicate startup due to nested router lifespan events
         if self._startup_done:
             return
-        self._startup_done = True
         self.__start_info()
         if not self.database:
             first_run()
@@ -75,9 +74,9 @@ class Program(RenameThread, RSSThread, OffsetScanThread, CalendarRefreshThread):
             logger.info("[Core] No image cache exists, create image cache.")
             await cache_image()
         await self.start()
+        self._startup_done = True
 
     async def start(self):
-        self.stop_event.clear()
         settings.load()
         max_retries = 10
         retry_count = 0
@@ -103,6 +102,7 @@ class Program(RenameThread, RSSThread, OffsetScanThread, CalendarRefreshThread):
         self.scan_start()
         # Start calendar refresh (every 24 hours)
         self.calendar_start()
+        self._tasks_started = True
         logger.info("Program running.")
         return ResponseModel(
             status=True,
@@ -113,11 +113,11 @@ class Program(RenameThread, RSSThread, OffsetScanThread, CalendarRefreshThread):
 
     async def stop(self):
         if self.is_running:
-            self.stop_event.set()
             await self.rename_stop()
             await self.rss_stop()
             await self.scan_stop()
             await self.calendar_stop()
+            self._tasks_started = False
             return ResponseModel(
                 status=True,
                 status_code=200,
@@ -133,14 +133,39 @@ class Program(RenameThread, RSSThread, OffsetScanThread, CalendarRefreshThread):
             )
 
     async def restart(self):
-        await self.stop()
-        await self.start()
-        return ResponseModel(
-            status=True,
-            status_code=200,
-            msg_en="Program restarted.",
-            msg_zh="程序重启成功。",
-        )
+        stop_ok = True
+        try:
+            await self.stop()
+        except Exception as e:
+            logger.warning(f"[Core] Error during stop in restart: {e}")
+            stop_ok = False
+        start_ok = True
+        try:
+            await self.start()
+        except Exception as e:
+            logger.error(f"[Core] Error during start in restart: {e}")
+            start_ok = False
+        if start_ok and stop_ok:
+            return ResponseModel(
+                status=True,
+                status_code=200,
+                msg_en="Program restarted.",
+                msg_zh="程序重启成功。",
+            )
+        elif start_ok:
+            return ResponseModel(
+                status=True,
+                status_code=200,
+                msg_en="Program restarted (stop had warnings).",
+                msg_zh="程序重启成功（停止时有警告）。",
+            )
+        else:
+            return ResponseModel(
+                status=False,
+                status_code=500,
+                msg_en="Program failed to restart.",
+                msg_zh="程序重启失败。",
+            )
 
     def update_database(self):
         need_update, _ = self.version_update
