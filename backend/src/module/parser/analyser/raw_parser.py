@@ -201,7 +201,7 @@ def process(raw_title: str):
 def raw_parser(raw: str) -> Episode | None:
     ret = process(raw)
     if ret is None:
-        logger.error(f"Parser cannot analyse {raw}")
+        logger.info(f"Detected non-episodic resource: {raw}, skipping.")
         return None
     name_en, name_zh, name_jp, season, sr, episode, sub, dpi, source, group = ret
     return Episode(
